@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from .net import retry
+
 _ROOT = Path(__file__).resolve().parent.parent / "data"
 DATA = _ROOT / "history.parquet"
 META = _ROOT / "meta.parquet"
@@ -19,7 +21,7 @@ COLS = ["code", "name", "date", "open", "high", "low", "close",
 
 def _spot():
     import akshare as ak
-    df = ak.stock_zh_a_spot_em()
+    df = retry(ak.stock_zh_a_spot_em)
     ren = {"代码": "code", "名称": "name", "今开": "open", "最高": "high",
            "最低": "low", "最新价": "close", "成交量": "volume",
            "成交额": "amount", "换手率": "turnover", "总市值": "mcap"}
@@ -34,25 +36,26 @@ def _spot():
 
 
 def _hist_one(code: str, start: str) -> pd.DataFrame | None:
+    """拉取单只个股历史。返回 None 仅代表【该股无数据】（停牌/退市/次新）。
+    网络错误经 retry() 重试；重试后仍失败则抛出（严格模式：由调用方决定终止任务）。"""
     import akshare as ak
-    for attempt in range(3):
-        try:
-            df = ak.stock_zh_a_hist(symbol=code, period="daily",
-                                    start_date=start, adjust="qfq")
-            if df is None or df.empty:
-                return None
-            ren = {"日期": "date", "开盘": "open", "最高": "high", "最低": "low",
-                   "收盘": "close", "成交量": "volume", "成交额": "amount",
-                   "换手率": "turnover"}
-            df = df.rename(columns=ren)
-            if "turnover" not in df.columns:
-                df["turnover"] = pd.NA
-            df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
-            return df[["date", "open", "high", "low", "close",
-                       "volume", "amount", "turnover"]]
-        except Exception:
-            time.sleep(2 * (attempt + 1))
-    return None
+
+    def _pull():
+        df = ak.stock_zh_a_hist(symbol=code, period="daily",
+                                start_date=start, adjust="qfq")
+        if df is None or df.empty:
+            return None  # 空数据是正常业务情况，不重试、不报错
+        ren = {"日期": "date", "开盘": "open", "最高": "high", "最低": "low",
+               "收盘": "close", "成交量": "volume", "成交额": "amount",
+               "换手率": "turnover"}
+        df = df.rename(columns=ren)
+        if "turnover" not in df.columns:
+            df["turnover"] = pd.NA
+        df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+        return df[["date", "open", "high", "low", "close",
+                   "volume", "amount", "turnover"]]
+
+    return retry(_pull)
 
 
 def _load() -> pd.DataFrame:
@@ -97,18 +100,18 @@ def ensure_industry(force: bool = False) -> dict:
     import akshare as ak
     rows = []
     try:
-        boards = ak.stock_board_industry_name_em()
+        boards = retry(ak.stock_board_industry_name_em)
         col = "板块名称" if "板块名称" in boards.columns else boards.columns[1]
         for bname in boards[col].tolist():
             try:
-                cons = ak.stock_board_industry_cons_em(symbol=bname)
+                cons = retry(ak.stock_board_industry_cons_em, symbol=bname)
                 ccol = "代码" if "代码" in cons.columns else cons.columns[1]
                 rows += [{"code": str(c), "industry": bname} for c in cons[ccol]]
             except Exception:
-                pass
+                pass  # 单个板块失败仅影响该板块股票的"板块"显示标签，非选股条件
             time.sleep(0.5)
     except Exception as e:
-        print(f"行业板块拉取失败（用旧缓存/留空）：{e}")
+        print(f"行业板块拉取失败（用旧缓存/留空，不影响选股）：{e}")
         return load_industry()
     if rows:
         _ROOT.mkdir(exist_ok=True)
@@ -168,9 +171,11 @@ def update(weekday: int | None = None) -> pd.DataFrame:
 
 
 def index_hist(symbol: str = "000300") -> pd.DataFrame:
+    """沪深300 指数历史。网络错误经 retry() 重试；重试后仍失败则抛出，
+    使整个任务失败（用户确认：指数关系到"强于沪深300"过滤条件，不容缺失）。"""
     import akshare as ak
     start = (pd.Timestamp.now() - pd.Timedelta(days=420)).strftime("%Y%m%d")
-    df = ak.index_zh_a_hist(symbol=symbol, period="daily", start_date=start)
+    df = retry(ak.index_zh_a_hist, symbol=symbol, period="daily", start_date=start)
     df = df.rename(columns={"日期": "date", "收盘": "close"})
     df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
     return df[["date", "close"]]

@@ -89,10 +89,11 @@ def periods_back(n: int, from_date=None) -> list[str]:
 def _fetch_period(period: str) -> pd.DataFrame:
     """拉取指定报告期全市场并打分。返回 code,name,score,flags,detail。"""
     import akshare as ak
+    from .net import retry
     prev = _prev_period(period)
 
     def pull(fn, date, cols):
-        df = fn(date=date)
+        df = retry(fn, date=date)  # 网络错误重试；字段缺失属代码错误，下面立即抛出
         missing = [c for c in cols if c not in df.columns]
         if missing:
             raise RuntimeError(f"AKShare 接口 {fn.__name__} 缺少字段 {missing}，"
@@ -145,11 +146,12 @@ def to_fund_map(scores: pd.DataFrame) -> dict:
 
 
 def fund_history(n_periods: int = 8) -> dict:
-    """回测用：{报告期: {code: {"score","flags"}}}。单期失败跳过并提示。"""
+    """回测用：{报告期: {code: {"score","flags"}}}。
+
+    用户确认：绝不减少条件。任何报告期拉取失败（网络重试耗尽或字段变化）
+    都会抛出，中断整个回测——由用户重跑，而非静默跳过导致回测结果失真。
+    """
     out = {}
     for p in periods_back(n_periods):
-        try:
-            out[p] = to_fund_map(_fetch_period(p))
-        except Exception as e:
-            print(f"报告期 {p} 拉取失败，回测中该期按无基本面数据处理：{e}")
+        out[p] = to_fund_map(_fetch_period(p))  # 失败即抛出，不再吞
     return out
