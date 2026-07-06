@@ -1,0 +1,75 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>基本面评分 · A股每日扫描</title><script>
+(function(){var t=localStorage.getItem('theme');
+if(t)document.documentElement.setAttribute('data-theme',t)})();
+</script>
+<style>
+:root{--bg:#101418;--panel:#171d24;--line:#242c36;--txt:#dbe2ea;--dim:#8a96a3;
+--faint:#5f6b78;--up:#e8493f;--down:#2eaa6e;--accent:#e8b64c;--warn:#e8b64c}
+html[data-theme=light]{--bg:#f4f5f7;--panel:#ffffff;--line:#e2e6eb;--txt:#1d2733;
+--dim:#66727f;--faint:#93a0ad;--up:#d9342b;--down:#1e8e5a;--accent:#a06b00;--warn:#a06b00}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--txt);font:16px/1.7 "PingFang SC","Microsoft YaHei",
+system-ui,sans-serif;padding:0 16px 64px}
+.wrap{max-width:900px;margin:0 auto}
+header{padding:28px 0 8px;display:flex;justify-content:space-between;align-items:flex-start}
+h1{font-size:22px;font-weight:600;letter-spacing:.04em}
+h1 .tick{color:var(--accent)}
+.meta{color:var(--dim);font-size:13px;margin-top:4px}
+#themeBtn{background:none;border:1px solid var(--line);border-radius:999px;
+color:var(--dim);width:38px;height:38px;font-size:17px;cursor:pointer}
+nav{display:flex;gap:8px;margin:16px 0 20px;flex-wrap:wrap}
+nav a{color:var(--dim);text-decoration:none;font-size:14px;padding:6px 14px;
+border:1px solid var(--line);border-radius:999px}
+nav a.on{color:var(--txt);border-color:var(--accent)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.filters input,.filters select{background:var(--panel);border:1px solid var(--line);
+border-radius:8px;color:var(--txt);font-size:14px;padding:8px 10px}
+.filters input{width:90px}
+.filters button{background:none;border:1px solid var(--line);border-radius:8px;
+color:var(--dim);font-size:14px;padding:8px 12px;cursor:pointer}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+padding:14px 16px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.name{font-size:17px;font-weight:600}
+.code{color:var(--dim);font-size:13px;margin-left:8px;font-weight:400}
+.ind{color:var(--faint);font-size:12px;margin-left:6px}
+.num{font-family:ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+.up{color:var(--up)}.down{color:var(--down)}
+.kv{display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--dim)}
+.kv b{color:var(--txt);font-weight:500}
+.chip{font-size:12px;padding:2px 8px;border-radius:4px;border:1px solid var(--line);
+color:var(--dim);margin:2px 4px 0 0;display:inline-block}
+.chip.warn{color:var(--warn);border-color:var(--warn)}
+.chip.why{color:var(--dim)}
+.rej .name{text-decoration:line-through;color:var(--dim);font-weight:500}
+.rej{opacity:.72}
+details{margin-top:20px}
+summary{cursor:pointer;color:var(--dim);font-size:14px;padding:8px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:right;padding:9px 10px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--dim);font-weight:500;font-size:12px}
+.tag{font-size:12px;padding:2px 8px;border-radius:4px;border:1px solid}
+.tag.qs{color:var(--down);border-color:var(--down)}
+.tag.jbm{color:var(--up);border-color:var(--up)}
+.tag.zy{color:var(--accent);border-color:var(--accent)}
+.note{border-left:3px solid var(--accent);padding:10px 14px;background:var(--panel);
+color:var(--dim);font-size:13px;margin:20px 0}
+input[type=search]{width:100%;background:var(--panel);border:1px solid var(--line);
+border-radius:8px;color:var(--txt);font-size:15px;padding:10px 14px;margin-bottom:14px}
+.empty{color:var(--dim);text-align:center;padding:48px 0}
+</style></head>
+<body><div class="wrap"><header><div><h1><span class="tick">▮</span> A股每日扫描</h1>
+<p class="meta">数据更新：等待首次运行 · 收盘后自动运行</p></div>
+<button id="themeBtn" aria-label="切换日间/夜间模式">☀</button></header>
+<nav><a href="index.html" class="">今日候选</a><a href="fundamental.html" class="on">基本面评分</a><a href="backtest.html" class="">策略回测</a></nav><p class="empty">基本面数据尚未生成，等下一次自动运行。</p>
+<p class="note">本站为个人研究工具，所有信号由固定规则自动计算，不构成投资建议。A股为 T+1 交易，信号日买入次日方可卖出，隔夜风险自担。</p></div><script>
+var b=document.getElementById('themeBtn'),r=document.documentElement;
+function ic(){b.textContent=r.getAttribute('data-theme')==='light'?'☾':'☀'}
+b.onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+if(n==='dark'){r.removeAttribute('data-theme');localStorage.setItem('theme','dark')}
+else{r.setAttribute('data-theme','light');localStorage.setItem('theme','light')}ic()};
+ic();
+</script></body></html>
