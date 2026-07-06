@@ -1,0 +1,28 @@
+name: 每日扫描
+on:
+  schedule:
+    - cron: '30 9 * * 1-5'   # UTC 09:30 = 北京时间 17:30，周一到周五
+  workflow_dispatch: {}       # 也允许手动点按钮运行（首次必须手动跑一次）
+permissions:
+  contents: write
+concurrency:
+  group: daily
+  cancel-in-progress: false
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python -m src.main daily
+      - name: 提交结果
+        run: |
+          git config user.name "scanner-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data docs
+          git diff --cached --quiet || git commit -m "每日扫描 $(date +%F)"
+          git push
